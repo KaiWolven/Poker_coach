@@ -81,7 +81,7 @@ Este proyecto necesita un proyecto propio y gratuito de Firebase para las cuenta
 
 MIT License
 
-Copyright (c) 2026 [Tu nombre o tu usuario de GitHub]
+Copyright (c) 2026 KaiWolven
 
 Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rightsto use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software isfurnished to do so, subject to the following conditions:
 
