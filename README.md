@@ -76,15 +76,11 @@ Este proyecto necesita un proyecto propio y gratuito de Firebase para las cuenta
  
 - La `apiKey` de Firebase es una clave de cliente pensada para ser pública; la protección real de los datos la dan las reglas de Firestore, no el secreto de esa clave.
 - No hay contraseñas de administrador ni credenciales de servidor en este repositorio. No subas claves de tipo "cuenta de servicio" (por ejemplo, las que empiezan por `AQ.`) — no son necesarias ni compatibles con este proyecto.
+
 ## Licencia
  
-
-MIT License
-
+La Mesa — Coach de Poker Texas Hold'em
 Copyright (c) 2026 KaiWolven
 
-Permission is hereby granted, free of charge, to any person obtaining a copyof this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rightsto use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software isfurnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+Esta obra está sujeta a la licencia Creative Commons
+Atribución-NoComercial 4.0 Internacional (CC BY-NC 4.0)
