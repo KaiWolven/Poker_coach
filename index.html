@@ -136,10 +136,12 @@
   .center-area{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); text-align:center; width:260px;}
   .street-banner{font-family:'Fraunces',serif; font-size:11.5px; letter-spacing:2.5px; text-transform:uppercase; color:rgba(239,233,221,0.55); margin-bottom:2px;}
   .pot-display{font-family:'IBM Plex Mono',monospace; color:var(--gold-bright); font-size:13px; margin-bottom:8px;}
-  .pot-display .amt{font-size:18px; font-weight:600;}
+  .pot-display .amt{font-size:18px; font-weight:600; display:inline-block; animation:potPulse 0.4s ease-out;}
+  @keyframes potPulse{0%{transform:scale(1.18); color:#fff;} 100%{transform:scale(1);}}
   .board-row{display:flex; justify-content:center; gap:6px; min-height:64px; align-items:center;}
 
-  .bet-chip{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--felt-2); background:var(--gold-bright); border-radius:20px; padding:2px 8px; font-weight:600;}
+  .bet-chip{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--felt-2); background:var(--gold-bright); border-radius:20px; padding:2px 8px; font-weight:600; animation:chipPop 0.3s ease-out;}
+  @keyframes chipPop{from{transform:scale(0.4); opacity:0;} to{transform:scale(1); opacity:1;}}
 
   .action-bar{margin-top:16px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px;}
   .action-bar .msg{font-size:13px; color:var(--muted); margin-bottom:10px; min-height:18px;}
@@ -440,6 +442,7 @@
         <option value="6" selected>Mesa: 6-Max</option>
         <option value="9">Mesa: 9-Max</option>
       </select>
+      <button id="muteBtn" onclick="toggleMuteClick()" title="Silenciar/activar sonido">🔊 Sonido</button>
       <button id="modeBtn" onclick="toggleModeClick()">Modo: Cash Game</button>
       <button id="resetBtn" onclick="resetChipsClick()">Reiniciar fichas</button>
       <button id="resetStatsBtn" onclick="resetStatsClick()">Reiniciar estadísticas</button>
@@ -684,6 +687,85 @@ const BOT_DEFS=[
   {name:'Carla',  style:'Shark (ajustada)',tightness:1.20, aggression:1.15, bluffFreq:0.12, threeBetFreq:0.14, cbet:0.70},
   {name:'Pablo',  style:'Recreativo',      tightness:0.90, aggression:0.65, bluffFreq:0.10, threeBetFreq:0.05, cbet:0.40},
 ];
+
+/* ============ SOUND (synthesized, no external files) ============ */
+const SFX=(function(){
+  let ctx=null, master=null, muted=false;
+  try{ muted=localStorage.getItem('lm_muted')==='1'; }catch(e){}
+
+  function ensureCtx(){
+    if(!ctx){
+      try{
+        ctx=new (window.AudioContext||window.webkitAudioContext)();
+        master=ctx.createGain();
+        master.gain.value=0.6;
+        master.connect(ctx.destination);
+      }catch(e){ ctx=null; }
+    }
+    if(ctx && ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+  function envGain(startVal,duration){
+    const g=ctx.createGain();
+    g.gain.setValueAtTime(startVal, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+duration);
+    return g;
+  }
+  function tone(freq,duration,type,vol){
+    if(muted || !ensureCtx()) return;
+    const osc=ctx.createOscillator();
+    osc.type=type||'sine';
+    osc.frequency.value=freq;
+    const g=envGain(vol||0.3,duration);
+    osc.connect(g); g.connect(master);
+    osc.start(); osc.stop(ctx.currentTime+duration);
+  }
+  function toneSlide(freqStart,freqEnd,duration,type,vol){
+    if(muted || !ensureCtx()) return;
+    const osc=ctx.createOscillator();
+    osc.type=type||'sine';
+    osc.frequency.setValueAtTime(freqStart, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20,freqEnd), ctx.currentTime+duration);
+    const g=envGain(vol||0.3,duration);
+    osc.connect(g); g.connect(master);
+    osc.start(); osc.stop(ctx.currentTime+duration);
+  }
+  function noiseBurst(duration,filterFreq,vol,filterType){
+    if(muted || !ensureCtx()) return;
+    const bufSize=Math.max(1,Math.floor(ctx.sampleRate*duration));
+    const buf=ctx.createBuffer(1,bufSize,ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<bufSize;i++) data[i]=Math.random()*2-1;
+    const src=ctx.createBufferSource();
+    src.buffer=buf;
+    const filt=ctx.createBiquadFilter();
+    filt.type=filterType||'bandpass'; filt.frequency.value=filterFreq; filt.Q.value=1.3;
+    const g=envGain(vol||0.3,duration);
+    src.connect(filt); filt.connect(g); g.connect(master);
+    src.start();
+  }
+  return {
+    mute(){ muted=true; try{localStorage.setItem('lm_muted','1');}catch(e){} },
+    unmute(){ muted=false; try{localStorage.setItem('lm_muted','0');}catch(e){} },
+    toggle(){ if(muted) this.unmute(); else this.mute(); return muted; },
+    isMuted(){ return muted; },
+    resumeOnGesture(){ ensureCtx(); },
+    // crisp, high, papery snap — clearly brighter than the chip sound
+    card(){ noiseBurst(0.05,6500,0.4,'highpass'); },
+    // a low resonant "thonk" plus a mid-range clack, layered — reads as a stack of chips, not just noise
+    chip(){
+      tone(150,0.07,'sine',0.35);
+      noiseBurst(0.05,1000,0.4);
+      setTimeout(()=>{ tone(190,0.05,'sine',0.22); noiseBurst(0.035,1400,0.28); },55);
+    },
+    check(){ tone(700,0.07,'triangle',0.22); },
+    foldSound(){ toneSlide(260,120,0.16,'sine',0.16); },
+    win(){ [523.25,659.25,783.99,1046.5].forEach((f,i)=>{ setTimeout(()=>tone(f,0.4,'triangle',0.3), i*95); }); },
+    lose(){ toneSlide(220,90,0.35,'sine',0.2); },
+    botWin(){ [392.0,329.63].forEach((f,i)=>{ setTimeout(()=>tone(f,0.22,'sine',0.14), i*80); }); },
+  };
+})();
+document.addEventListener('click', ()=>SFX.resumeOnGesture(), {once:true});
 
 let G=null;
 let CURRENT_UID=null;
@@ -1007,6 +1089,7 @@ function startHand(){
 
   if(G.handNumber>1) G.dealerIdx=nextEligibleSeat(G.dealerIdx);
   G.players.forEach(p=>{ if(!p.eliminated) for(let r=0;r<2;r++) p.hole.push(G.deck.pop()); });
+  SFX.card();
 
   updateBlindsForHand();
   pushLog(`<span class="hl">— Mano ${G.handNumber} —</span> Botón: ${G.players[G.dealerIdx].name}${G.mode==='tournament'?` · Ciegas ${SB}/${BB}`:''}`);
@@ -1113,10 +1196,12 @@ function doCheckCall(idx){
   const toCall=G.currentBet-p.bet;
   if(toCall<=0){
     pushLog(`${p.name} pasa`);
+    SFX.check();
   } else {
     const pay=Math.min(toCall,p.stack);
     p.stack-=pay; p.bet+=pay; p.totalContributed+=pay; G.pot+=pay;
     pushLog(`${p.name} iguala (${pay})`);
+    SFX.chip();
     if(pay<toCall){
       // shortfall: refunds happen implicitly through side-pot math at showdown, no action needed here
     }
@@ -1154,6 +1239,7 @@ function doBetRaise(idx,toAmount,isBluff){
     if(wasRaise) G.raisesThisStreet++;
     const verb = G.street==='preflop' ? (wasRaise? (G.raisesPreflopCount>=2?'resube (3-bet+) a':'sube a') : 'abre a') : (wasRaise?'sube a':'apuesta');
     pushLog(`${p.name} ${verb} ${p.bet}${p.allIn?' (all-in)':''}`);
+    SFX.chip();
     if(idx===0){
       if(G.street==='preflop'){
         G.curHandStat.vpip=true; G.curHandStat.pfr=true;
@@ -1168,6 +1254,7 @@ function doBetRaise(idx,toAmount,isBluff){
     }
   } else {
     pushLog(`${p.name} iguala all-in por ${pay}`);
+    SFX.chip();
     if(idx===0){
       if(G.street==='preflop' && pay>0) G.curHandStat.vpip=true;
       if(pay>0) G.curHandStat.passCount++;
@@ -1194,6 +1281,7 @@ function doFold(idx){
   }
   p.folded=true;
   pushLog(`${p.name} se retira`);
+  SFX.foldSound();
   if(idx===0 && G.street!=='preflop') G.curHandStat.foldStreet=G.street;
   if(activePlayers().length===1){
     const winner=activePlayers()[0];
@@ -1242,6 +1330,7 @@ function dealNextStreetCards(){
   else if(G.street==='turn'){ G.board.push(G.deck.pop()); G.street='river'; }
   else if(G.street==='river'){ G.street='showdown'; return; }
   pushLog(`<span class="hl">${streetLabel()}</span>: ${G.board.map(c=>rname(c.rank)+c.suit).join(' ')}`);
+  SFX.card();
   if(G.street!=='preflop') G.curHandStat.sawFlop=true;
 }
 
@@ -1363,6 +1452,7 @@ function finalizeHand(winnerId,resultText,wasShowdown){
   st.board = G.board.slice();
   G.handHistory.push(st);
   G.lastNote = st.note;
+  SFX.win();
   G.players.forEach(p=>{
     if(!p.recentNet) p.recentNet=[];
     p.recentNet.push(p.stack-p.handStartStack);
@@ -1982,6 +2072,16 @@ document.addEventListener('keydown', (e)=>{
 });
 
 document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+
+function toggleMuteClick(){
+  const muted=SFX.toggle();
+  const btn=document.getElementById('muteBtn');
+  if(btn) btn.textContent = muted ? '🔇 Sonido' : '🔊 Sonido';
+}
+(function syncMuteButton(){
+  const btn=document.getElementById('muteBtn');
+  if(btn) btn.textContent = SFX.isMuted() ? '🔇 Sonido' : '🔊 Sonido';
+})();
 
 /* ============ INIT ============ */
 initFirebase();
