@@ -1,0 +1,24 @@
+{
+  "name": "La Mesa",
+  "short_name": "La Mesa",
+  "description": "Practica Texas Hold'em contra 5 rivales con IA, con un coach que analiza tu forma de jugar.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0e0c",
+  "theme_color": "#0a0e0c",
+  "icons": [
+    {
+      "src": "images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
